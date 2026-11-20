@@ -2,18 +2,65 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Port Azura — Open-World Crime Mini-Game</title>
+<link rel="icon" href="data:,">
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
-  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
-  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html,body{margin:0;height:100%;overflow:hidden;background:#0b1020;font-family:system-ui,Segoe UI,Arial,sans-serif;color:#fff}
+  #scene{position:fixed;inset:0;display:block;touch-action:none}
+  .hidden{display:none!important}
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+  #topbar{position:absolute;top:10px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start}
+  .pill{background:rgba(5,10,25,.72);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:6px 10px;font-weight:700}
+  #stars{color:#ffd23f;font-size:22px;letter-spacing:2px;text-shadow:0 1px 3px #000}
+  #healthWrap{width:180px;height:14px;background:rgba(0,0,0,.6);border:1px solid #fff3;border-radius:7px;overflow:hidden;margin-top:4px}
+  #healthBar{height:100%;width:100%;background:linear-gradient(90deg,#ff4757,#ffa502)}
+  #objective{position:absolute;top:64px;left:50%;transform:translateX(-50%);max-width:82vw;text-align:center;background:rgba(5,10,25,.78);border:1px solid #ffd23f88;border-radius:10px;padding:8px 14px;font-size:15px}
+  #dialogue{position:absolute;bottom:120px;left:50%;transform:translateX(-50%);max-width:86vw;background:rgba(5,10,25,.88);border-left:4px solid #00d2ff;border-radius:8px;padding:10px 14px;font-size:15px}
+  #prompt{position:absolute;bottom:88px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);border-radius:8px;padding:6px 12px;font-size:14px}
+  #minimap{position:absolute;right:12px;bottom:12px;width:170px;height:170px;border:2px solid rgba(255,255,255,.5);border-radius:10px;background:#123}
+  #crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:22px;opacity:.85}
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(8,20,45,.88),rgba(30,10,40,.92));z-index:20;text-align:center;padding:20px}
+  .screen h1{font-size:52px;margin:0 0 4px;color:#ffd23f;text-shadow:0 4px 0 #c0392b,0 8px 24px #000;letter-spacing:2px}
+  .screen h2{font-size:34px;margin:0 0 10px;color:#ffd23f}
+  .screen p{max-width:560px;line-height:1.5;color:#dfe6ee}
+  .btn{pointer-events:auto;cursor:pointer;background:#e84118;color:#fff;border:0;border-radius:10px;padding:12px 28px;font-size:18px;font-weight:800;margin:6px;box-shadow:0 4px 0 #8e2a10}
+  .btn.alt{background:#0097e6;box-shadow:0 4px 0 #065a86}
+  #touch{position:fixed;inset:0;z-index:8;pointer-events:none}
+  #stick{position:absolute;left:22px;bottom:90px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.35);pointer-events:auto}
+  #knob{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.55)}
+  .tbtn{position:absolute;width:58px;height:58px;border-radius:50%;background:rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.4);color:#fff;font-weight:800;pointer-events:auto;display:flex;align-items:center;justify-content:center;font-size:12px}
+  #btnAct{right:26px;bottom:170px}#btnFire{right:96px;bottom:104px;background:rgba(200,30,30,.6)}#btnRun{right:26px;bottom:96px}
+  @media (pointer:fine){#touch{display:none}}
 </style>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
-<p id="status" role="status" aria-live="polite"></p>
+<canvas id="scene" aria-label="Port Azura 3D game view"></canvas>
+<div id="hud" class="hidden">
+  <div id="topbar">
+    <div><div class="pill">❤ Health</div><div id="healthWrap"><div id="healthBar"></div></div><div class="pill" style="margin-top:5px">🚗 <span id="modeLabel">On Foot</span></div></div>
+    <div style="text-align:right"><div id="stars">☆☆☆☆☆</div><div class="pill">💰 $<span id="cash">0</span></div><div class="pill" style="margin-top:5px" id="clock">Day 1 · 17:40</div></div>
+  </div>
+  <div id="objective"></div>
+  <div id="dialogue" class="hidden"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="crosshair">+</div>
+  <canvas id="minimap" width="170" height="170"></canvas>
+</div>
+<div id="touch" class="hidden"><div id="stick"><div id="knob"></div></div><div class="tbtn" id="btnAct">ENTER</div><div class="tbtn" id="btnFire">FIRE</div><div class="tbtn" id="btnRun">RUN</div></div>
+
+<div id="menu" class="screen">
+  <h1>PORT AZURA</h1>
+  <p><b>A sun-soaked coastal city. One broke courier. Four jobs that change everything.</b><br>
+  You are <b>Rico Vale</b>, a marina courier in debt to fixer <b>Marina Sol</b>. Work her story chain, dodge the Azura PD, and own the port by sundown.</p>
+  <p>🖱️ Mouse look · <b>WASD</b> move · <b>Shift</b> run · <b>E</b> enter/steal car · <b>F / Click</b> shoot · <b>Space</b> brake/jump · <b>P</b> pause · <b>M</b> mute<br>📱 Touch: left joystick, ENTER / FIRE / RUN buttons.</p>
+  <div><button class="btn" id="btnNew">▶ NEW GAME</button><button class="btn alt" id="btnContinue">↻ CONTINUE</button></div>
+  <p id="saveInfo" style="font-size:13px;opacity:.8"></p>
+</div>
+<div id="pauseScr" class="screen hidden"><h2>⏸ PAUSED</h2><p>Port Azura waits for no one — except now.</p><button class="btn" id="btnResume">RESUME</button><button class="btn alt" id="btnRestart2">RESTART</button></div>
+<div id="endScr" class="screen hidden"><h2 id="endTitle">BUSTED</h2><p id="endText"></p><button class="btn" id="btnRestart">↻ TRY AGAIN</button></div>
+<p id="status" role="status" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)"></p>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

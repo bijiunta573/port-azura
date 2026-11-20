@@ -12,6 +12,7 @@
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
+// Port Azura — an original open-world crime mini-game for the make.fun gta6-01 bounty (game title: "Port Azura", entry slug: port-azura, author: bijiunta573).
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
